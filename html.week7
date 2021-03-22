@@ -1,0 +1,57 @@
+<!-- CSS Code: Place this code in the document's head (between the 'head' tags) -->
+<style>
+table.GeneratedTable {
+  width: 100%;
+  background-color: #ffffff;
+  border-collapse: collapse;
+  border-width: 2px;
+  border-color: #ffcc00;
+  border-style: solid;
+  color: #000000;
+}
+
+table.GeneratedTable td, table.GeneratedTable th {
+  border-width: 2px;
+  border-color: #ffcc00;
+  border-style: solid;
+  padding: 3px;
+}
+
+table.GeneratedTable thead {
+  background-color: #ffcc00;
+}
+</style>
+
+<!-- HTML Code: Place this code in the document's body (between the 'body' tags) where the table should appear -->
+<table class="GeneratedTable">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Author</th>
+      <th>Year</th>
+      <th>Version</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>The Daily Stoic: 366 Meditations on Wisdom, Perseverance, and the Art of Living</td>
+      <td>Ryan Holiday, Stephen Hanselman</td>
+      <td>2016</td>
+      <td>Hardback</td>
+    </tr>
+    <tr>
+      <td>The War of Art</td>
+      <td>Steven Pressfield</td>
+      <td>2012</td>
+      <td>Paperback</td>
+    </tr>
+    <tr>
+      <td>Inner Peace: A Guided Meditation Journal for Beginners</td>
+      <td>Jordana Reim</td>
+      <td>2020</td>
+      <td>Paperback</td>
+    </tr>
+  </tbody>
+</table>
+<!-- Codes by Quackit.com -->
+
