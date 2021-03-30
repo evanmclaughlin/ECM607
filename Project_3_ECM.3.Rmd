@@ -1,0 +1,151 @@
+---
+title: "Project 3"
+author: "Evan McLaughlin"
+date: "3/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(openintro)
+library(dplyr)
+library(knitr)
+library(magrittr)
+library(stringr)
+library(fmsb)
+library(NLP)
+library(RColorBrewer)
+library(tidytext)
+library(tm)
+library(ggpubr)
+library(stringr)
+```
+
+## Overview
+Below, we undertook some NLP processes to distill the job descriptions down to a few key skills. After reading in and cleaning the column, we convert the column to tokens, ran the tokens against our stop words list, and found the most prevalent words in the job descriptions. Single words don't provide much value in terms of analytical insight, so, after enhancing our stop word list, we next determined the most common word pairings, which proved to have much more analytical value. Data Science and Machine Learning were the overwhelming leaders in terms of in-demand skills. Considering Data Science more represents a group of skills as opposed to a single skill, we can safely conclude that in London Data Scientist job postings, Machine Learning represents the most sought-after skill.
+
+Nevertheless, it's useful to learn about other in-demand skills, so we filtered out Data Science and Machine Learning from our dataset in order to better visualize other popular skills. "Computer Science," "Data Analytics," and the ever-important "Communication Skills" topped the list of sought-after characteristics in London-area Data Scientist job descriptions. We've used some helpful graphics to help illustrate our findings below.
+
+## NLP Analyzing Job Description
+```{r}
+# first, let's read in the data extracted from the larger scraped dataset and clean up the job descriptions
+jobs_desc_file = "https://raw.githubusercontent.com/evanmclaughlin/ECM607/master/Project1_Description-Data.csv"
+jobs_desc = readLines( jobs_desc_file , warn = FALSE)
+jobs_desc <- data.frame(do.call('rbind', strsplit(as.character(jobs_desc),'"',fixed=TRUE)))
+jobs_desc <- jobs_desc[-1,-1]
+jobs_df <- jobs_desc$X2
+
+# It's easier to manipulate this data how we want to by converting it to a tibble
+jobs_tbl <- tibble(txt = jobs_df)
+#jobs_tbl
+
+#next, let's tokenize the text of the description and execute a word count to get an idea of the most prevalent words. We'll also run the result against a stop words list to exclude words that don't add any value to our analysis such as "the", "and", "that", etc.
+token <- jobs_tbl %>%
+  unnest_tokens(word, 1) %>%
+  anti_join(stop_words)
+
+token_count <- token %>%
+  count(word) %>%
+  arrange(desc(n))
+
+head(token_count)
+```
+
+
+```{r}
+# Looking at the output above, it will definitely be more useful to take a look at the most common word pairs, given many of these words are more descriptive in combination with others
+token_pairs <- jobs_tbl %>%
+  unnest_tokens(pairs, 1, token = "ngrams", n = 2)
+token_pairs %>%
+  count(pairs) %>%
+  arrange(desc(n))
+
+# Now, let's run the pairs against the stop_word database by separating the pairs and eliminating cases where either word appears in the stop_word list
+pairs_separated <- token_pairs %>%
+  separate(pairs, c("word1", "word2"), sep = " ")
+
+pairs_df <- pairs_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+pairs_count <- pairs_df %>% 
+  count(word1, word2, sort = TRUE)
+
+head(pairs_count)
+```
+```{r}
+# Before uniting these columns, let's quickly go through the prominent words and eliminate more terms that don't add much value by augmenting the stop_words list and running another. 
+# Some such words are job titles, recruiter names, job locations, salary information, contract lengths, etc. 
+# We can add to this list if we happen to see any additional words that aren't helpful to our analysis. 
+
+new_stop <- data.frame(word = c("apply", "london", "remote","remotely", "interview", "salary", "contract", "candidate", "scientist", "scientists", "team", "analyst", "engineer", "engineers", "manager", "managers", "senior", "employment", "experienced", "consultant", "junior", "month", "level", "masters", "rosie", "months", "experience", "level", "orientation", "opportunity", "principal", "benefits", "nick", "days", "day", "role", "francesca", "goldman", "luke", "anna", "date", "charlotte", "driven"), lexicon = "custom")
+my_stopwords <- rbind(new_stop, stop_words)
+
+pairs_df <- pairs_separated %>%
+  filter(!word1 %in% my_stopwords$word) %>%
+  filter(!word2 %in% my_stopwords$word)
+
+# Let's now reunite the columns into a single pairs for analysis.
+
+pairs_united <- pairs_df %>%
+  unite(term, word1, word2, sep = " ")
+df_terms <- pairs_united$term
+terms_tbl <- tibble(txt = df_terms)
+
+united_count <- pairs_united %>% 
+  count(term, sort = TRUE)
+
+head(united_count)
+```
+
+
+```{r}
+# To facilitate visualization, we can narrow down to the most relevant job skills that employers are looking for by setting a floor on the number of instances and condense our data frame.
+
+library(plotly)
+a <- 30
+data <- united_count
+Results<-dplyr::filter(data, data[,2]>a)
+
+colnames(Results)<-c("term", "frequency")
+
+ggplot2::ggplot(Results, aes(x=term, y=frequency, fill=term)) + geom_bar(width = 0.75,  stat = "identity", colour = "black", size = 1) + coord_polar(theta = "x") + xlab("") + ylab("") + ggtitle("Term Frequency (min: 30)") + theme(legend.position = "none") + labs(x = NULL, y = NULL)
+
+plotly::ggplotly(ggplot2::ggplot(Results, aes(x=term, y=frequency, fill=term)) + geom_bar(width = 0.75, stat = "identity", colour = "black", size = 1) + 
+xlab("") + ylab("") + ggtitle("Word Frequency (min: 30)") + theme(legend.position = "none") + labs(x = NULL, y = NULL) + theme(plot.subtitle = element_text(vjust = 1), plot.caption = element_text(vjust = 1), axis.text.x = element_text(angle = 90)) + theme(panel.background = element_rect(fill = "honeydew1"), plot.background = element_rect(fill = "antiquewhite")))%>% config(displaylogo = F) %>% config(showLink = F)
+
+```
+
+```{r}
+
+# Data Science and Machine Learning are obviously the overwhelming results, relative to other skills pairs. Data Science is sort of a catch-all term that we should strive to ignore moving forward. 
+
+# Keeping these two terms in the visualization makes it difficult to analyze the remaining results. So let's insert a maximum records constraint in the above graphics to try to add some nuance to our analysis.
+
+a <- 30
+b <- 100
+data2 <- united_count
+Results2<-dplyr::filter(data2, data2[,2]>a, data2[,2]<b )
+
+colnames(Results2)<-c("term", "frequency")
+
+ggplot2::ggplot(Results2, aes(x=term, y=frequency, fill=term)) + geom_bar(width = 0.75,  stat = "identity", colour = "black", size = 1) + coord_polar(theta = "x") + xlab("") + ylab("") + ggtitle("Term Frequency (min: 30, max: 100)") + theme(legend.position = "none") + labs(x = NULL, y = NULL)
+
+plotly::ggplotly(ggplot2::ggplot(Results2, aes(x=term, y=frequency, fill=term)) + geom_bar(width = 0.75, stat = "identity", colour = "black", size = 1) + xlab("") + ylab("") + ggtitle("Word Frequency (min: 30, max: 100)") + theme(legend.position = "none") + labs(x = NULL, y = NULL) + theme(plot.subtitle = element_text(vjust = 1), plot.caption = element_text(vjust = 1), axis.text.x = element_text(angle = 90)) + theme(panel.background = element_rect(fill = "honeydew1"), plot.background = element_rect(fill = "antiquewhite")))%>% config(displaylogo = F) %>% config(showLink = F)
+
+#This provides quite a bit more differentiation between the remaining terms in our visualizations, but the most sought-after skill remains machine learning throughout the job descriptions.
+
+```
+
+```{r}
+# Let's just visualize the remaining (ex. Data Science and Machine Learning) terms once more.
+library(wordcloud2)
+c <- 10
+d <- 600
+Results3<-dplyr::filter(data2, data2[,2]>c, data2[,2]<d)
+
+wordcloud2(Results3, color = "random-light", backgroundColor = "grey", size = 1.75)
+```
+
+  
