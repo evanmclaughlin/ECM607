@@ -1,0 +1,53 @@
+---
+title: "Week 9 Assignment"
+author: "Evan McLaughlin"
+date: "4/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## Overview
+
+I've chosen to pull in the Movie Review API from the New York Times, because I love to read intelligent film opinions. I dropped in the NYT URL and the API key that I registered for. 
+
+```{r}
+#NYT API URL with API key appended
+
+api_url <- "https://api.nytimes.com/svc/movies/v2/reviews/picks.json?order=by-publication-date&api-key=0fRcq63AxIjjIAkqWMR9JltIAPSHApmD"
+
+library(rjson)
+library(jsonlite)
+# read in JSON data and convert to vector and R objects
+json_data <- fromJSON(paste(api_url))
+typeof(json_data)
+
+#head(json_data$results)
+```
+
+## Dataframe exercises
+
+I now need to convert the list into a into a dataframe with the variables that I care about
+```{r}
+review_data <- cbind(json_data$results$display_title, json_data$results$byline, json_data$results$summary_short, json_data$results$publication_date)
+
+review_df <- as.data.frame(review_data)
+# I'll rename the column names in the new dataframe now
+
+names(review_df)[names(review_df) == "V1"] <- "title"
+names(review_df)[names(review_df) == "V2"] <- "byline"
+names(review_df)[names(review_df) == "V3"] <- "summary"
+names(review_df)[names(review_df) == "V4"] <- "pub_date"
+
+head(review_df)
+```
+
+Above, we've pulled the reviews of the critics picks sorted by publication date. We can take this and undertake an NLP on the sentiment contained in the summary to try to glean insights on which critics are more harsh than others, if sentiment changes depending on the time of year, etc. 
+```{r}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
