@@ -1,0 +1,45 @@
+---
+title: 'Discussion 11: Recommender Systems'
+author: "Evan McLaughlin"
+date: "4/24/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Recommender Systems - An Analysis of LinkedIn’s Recommended for You Jobs functionality
+For this assignment I assessed LinkedIn’s function for suggesting jobs to its users, “based on [their] profile and search history (https://www.linkedin.com) through my own job search and profile editing.
+
+## Scenario analysis:
+- Target users: job searchers, people who are open to switching jobs, or really anyone looking to better understand what jobs are out there for someone with their background.
+- Key users goals: get job leads that can either lead to interviews or a better understanding of the job market given a user’s profile and activity on LinkedIn.
+- How site meets goals: LinkedIn seeks to deliver this through both tracking which jobs users apply for, save to their My Jobs section, search for / save searches for, as well as which jobs have skills sections that align with key words stored within users’ profiles.
+
+## LinkedIn Recommended for You Jobs Section
+
+### There is a stark difference between the jobs where the user is Top Applicant and those that are Recommend for the user based on his or her profile and search history.
+
+LinkedIn uses Skills that the user has selected and runs those against skills listed as desired in jobs posted by recruiters and HR departments, providing a match percentage and suggesting the user apply.
+This yielded significantly different results than those jobs recommended to me based on my profile and search/application history. This could mean that I’m applying to the wrong jobs, given my stated skills and those demanded by the companies I’m pursuing. It could also mean that the skills listed as necessary by some job posters don’t necessarily align with my understanding of the responsibilities needed for the jobs I’m pursuing. In any case, there seems to be a disconnect.
+
+### The recommended jobs functionality is especially weighted on title (VP, Director, Head, etc.) 
+
+I have occasionally applied to jobs in the title range above, but I found increasingly that, while the titles aligned with what I was perhaps looking for, the actual subject matter was far less relevant about half of the time. It seems as though the recommendation engine weights the title at least as equally as the key words its finding in the body of the job description in my application history, my LinkedIn profile, and the open jobs. This is problematic mainly for two reasons:
+
+First, firms use different titles for different seniority levels. What is a Director at one firm, might be a Vice President at another firm. And that’s just at large financial services providers. Most FinTechs don’t subscribe to the traditional financial services hierarchy, so those job titles are almost entirely meaningless. How many FinTech jobs am I missing out on?
+
+Second, and more personally, I’m pursuing Data Analyst jobs, and Analyst is considered by the engine to be lower in career hierarchy. Here again, I see very few Data Analyst openings in my recommended jobs, even though there is a high correlation with my listed skills, my previous applications, and the key words in most Data Analyst openings that are posted on LinkedIn. 
+
+To test this, I changed my previous titles to Analyst and Senior Analyst. Immediately, I began seeing more Data Analyst openings in my recommended jobs. I also started seeing more Financial Services Analyst jobs, which are indeed likely too junior. There seems to be some room for a bit more nuance.
+
+### The recommended jobs section does not rely too heavily on the Skills that the user claims he or she has.
+
+I tried changing the Skills that I have (since it’s easy, and no one can say I don’t have the skills I claim to have) to some that are entirely inconsistent with my background and don’t have anything to do with my career interests. I even had some friends “endorse” me for these skills (LinkedIn third-party validation of a capability I claim I have). There was really no change to the recommended jobs, but I did see some new jobs in the smaller Jobs where you’re a top applicant section. It seems that the recommended jobs section doesn’t reference the skills much, if at all. 
+
+## Recommendations to improve
+
+All in all, I’ve been able to find some intriguing jobs from the recommended jobs section, though not from the Top Applicant section. However, as noted above, the title weighting probably needs to be refined and could use some additional nuance. Setting aside the problem of excluding Data Analyst jobs, which often are looking for mid-career and senior professionals, it is inconsistent with the reality of today’s labor market, in which people are increasingly prone to career changes that might see them take a step “back” in terms of title, and in which title itself is largely meaningless and not particularly descriptive of a title’s place or “value” in an organization.
