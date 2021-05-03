@@ -1,0 +1,139 @@
+---
+title: "Project 4 - Document Classification"
+author: "Evan McLaughlin"
+date: "5/2/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+## Introduction
+Using previously-classified training documents classify a new batch of documents can be very efficient. In this example, we've been given batches of spam and non-spam emails to employ in our spam check test for new documents. We'll start with the spam/ham dataset to train our predictive model before setting it loose on new documents. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rlang)
+library(corpus)
+library(NLP)
+library(SnowballC)
+library(e1071)
+library(caret)
+library(magrittr)
+library(kableExtra)
+library(tidyverse)
+library(RTextTools)
+library(tm)
+library(tidymodels)
+library(textrecipes)
+library(discrim)
+library(naivebayes)
+```
+
+## Data
+
+We first have to read the data as folders, then files, then as rows. After that, we need to merge the datasets.     
+
+```{r spamham}
+hamf <- "C:\\Users\\Evan\\Desktop\\CUNY\\607\\Data\\spamham\\easy_ham"
+spamf <- "C:\\Users\\Evan\\Desktop\\CUNY\\607\\Data\\spamham\\spam_2"
+
+hamf2 <- list.files(path = hamf, full.names = TRUE)
+spamf2 <- list.files(path = spamf, full.names = TRUE)
+
+ham <-list.files(path = hamf) %>%
+as.data.frame() %>%
+  set_colnames("file") %>%
+  mutate(text = lapply(hamf2, read_lines)) %>%
+  unnest(c(text)) %>%
+  mutate(class = "ham",
+         spam = 0) %>%
+  group_by(file) %>%
+  mutate(text = paste(text, collapse = " ")) %>%
+  ungroup() %>%
+  distinct()
+
+spam <- list.files(path = spamf) %>%
+  as.data.frame() %>%
+  set_colnames("file") %>%
+  mutate(text = lapply(spamf2, read_lines)) %>%
+  unnest(c(text)) %>%
+  mutate(class = "spam",
+         spam = 1) %>%
+  group_by(file) %>%
+  mutate(text = paste(text, collapse = " ")) %>%
+  ungroup() %>%
+  distinct()
+
+hamspam <- rbind(ham, spam) %>%
+  select(class,spam,file, text)
+
+head(hamspam)
+
+```
+
+We have a fully merged dataset now, and we've cleaned it a bit. Now let's get the probability of a ham or spam email.
+
+```{r}
+hamspam$class <- factor(hamspam$class)
+
+prop.table(table(hamspam$class))
+```
+## Model
+
+Now we can set our seed and run a test-train-split and tokenize the text for analysis as well as set up a workflow for our Naive Bayes
+
+```{r}
+set.seed(1000)
+
+hssplit <- initial_split(hamspam, strata = class)
+hstrain <- training(hssplit)
+hstest <- testing(hssplit)
+hsrec <- recipe(class ~ text, data = hstrain)
+hsrec <- hsrec %>%
+  step_tokenize(text) %>%
+  step_tokenfilter(text, max_tokens = 10) %>%
+  step_tfidf(text)
+
+hswf <- workflow() %>%
+  add_recipe(hsrec)
+nbspec <- naive_Bayes() %>%
+  set_mode("classification") %>%
+  set_engine("naivebayes")
+
+nbfit <- hswf %>%
+  add_model(nbspec) %>%
+  fit(data = hstrain)
+```
+
+
+```{r}
+set.seed(3210)
+(hsvfolds <- vfold_cv(hstrain))
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+# now we can set up our Naive Bayes workflow, resample, and collect the predictions
+nbwf <- workflow() %>%
+  add_recipe(hsrec) %>%
+  add_model(nbspec)
+nbresamples <- fit_resamples(
+  nbwf,
+  hsvfolds,
+  control = control_resamples(save_pred = TRUE))
+
+#collect predictions and resamples metrics and resamples predictions
+nbpredict <- collect_predictions(nbresamples)
+nbrsmetrics <- collect_metrics(nbresamples)
+nbrspredict <- collect_predictions(nbresamples)
+```
+
+## Visualization
+Now we can take a look at the 
+```{r}
+# I simply cannot get the visualization below to work and produce a useful ROC curve
+
+ggplot(nbrspredict) +
+  geom_line(aes(class, .pred_ham, color = NULL)) +  scale_color_discrete(guide = guide_legend(title = "Fold"))
+```
+
