@@ -1,0 +1,309 @@
+---
+title: "DATA 607 - Final Project"
+author: "Evan McLaughlin"
+date: "5/17/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+In this course, we've analyzed the most attractive skills among Data Scientists for prospective employers. I also delved into LinkedIn's recommendation engine and tried to reverse engineer how it determined which jobs to show me based on skills I claimed to have and the jobs I had applied to previously. 
+
+These projects prompted me to seek out opportunities for Data Scientists among FinTechs, Tech firms, and Gaming firms that are, purportedly, targeting expansion in New York more and more. However, it's worth targeting the highest growth, most dynamic firms, but what would the criteria for these characteristics be? To find these firms, I'll scrape Gaming, Technology, and Financial Technology firms in the US that are achieving a compound annual growth rate (CAGR) of at least 5% and run these results against which companies on Indeed are posting the most NY-based Data Scientist roles. By doing so, I'll hope to answer the following questions:
+
+- Are the highest-growth firms hiring up Data Scientists in the New York area? 
+- Are these jobs found on Indeed?
+
+To do this, I'll take the following steps:
+
+- Acquire CAGR company information and determine highest-growth companies.
+- Scrape a list of companies with highest number of NY-based Data Scientist roles on Indeed.
+- Organize the data, derive insights, and generate a few helpful visualizations for analysis and conclusions.
+
+## Data
+I was fortunate to only need two data sources for my analysis: 
+
+Maxine Kelly, Financial Times, April 13 2021.
+FT ranking: The Americas’ fastest-growing companies 2021, https://www.ft.com/americas-fastest-growing-companies-2021
+
+Indeed.com, May 15 search for full-time Data Scientist roles in the New York City area shared in the last thirty days. I also pull in San Francisco data for comparison purposes.
+
+
+```{r scrape and read}
+library(rvest)
+library(tidyverse)
+library(rebus)
+library(xml2)
+
+# read in csv data from the FT
+ft_data <- read_csv("https://raw.githubusercontent.com/evanmclaughlin/ECM607/master/FT_data.csv")
+
+# filter for US data, high CAGR, and data from Tech, Fintech, and Gaming
+
+US_based <- filter(ft_data, ft_data$Country == "US")
+high_cagr <- filter(US_based, US_based$CAGR_pct_inc > 5.0)
+
+# I'm establishing a flexible category data frame in case I want to expand or contract the search later
+
+sectors <- data.frame(word = c("Games industry", "Technology", "Fintech"))
+
+corp_df <- high_cagr %>%
+  filter(category %in% sectors$word)
+
+corp_df
+```
+This is a perfectly manageable dataframe now and helps us zero in on what we're really looking for in our analysis.
+
+## Data Scrape
+
+Next, we're going to pull Data Scientist opening data from Indeed and convert it to a readable format, using a read_html function. I'll repeat this step three times since Indeed caps the number of results at 50 per page. Merging these three datasets should give me a good population from which to draw some insights.
+```{r}
+#link to New York Data Scientist job query
+
+url1 <- "https://www.indeed.com/jobs?as_and=Data+Scientist&as_phr=&as_any=&as_not=&as_ttl=&as_cmp=&jt=all&st=&salary=&radius=25&l=New+York%2C+NY&fromage=any&limit=50&sort=date&psf=advsrch&from=advancedsearch"
+
+# read html
+page1 <- xml2::read_html(url1)
+
+#get the company name from the search
+company1 <- page1 %>% 
+    rvest::html_nodes("span")  %>% 
+    rvest::html_nodes(xpath = '//*[@class="company"]')  %>% 
+    rvest::html_text() %>%
+    stringi::stri_trim_both()
+tib1 <- tibble(company1, .name_repair = ~ c("company"))
+
+url2 <- "https://www.indeed.com/jobs?q=Data+Scientist&l=New+York%2C+NY&sort=date&limit=50&radius=25&start=50"
+
+# read html
+page2 <- xml2::read_html(url2)
+
+#get the company name from the search
+company2 <- page2 %>% 
+    rvest::html_nodes("span")  %>% 
+    rvest::html_nodes(xpath = '//*[@class="company"]')  %>% 
+    rvest::html_text() %>%
+    stringi::stri_trim_both()
+tib2 <- tibble(company2, .name_repair = ~ c("company"))
+
+url3 <- "https://www.indeed.com/jobs?q=Data+Scientist&l=New+York%2C+NY&sort=date&limit=50&radius=25&start=100"
+
+# read html
+page3 <- xml2::read_html(url3)
+
+#get the company name from the search
+company3 <- page3 %>% 
+    rvest::html_nodes("span")  %>% 
+    rvest::html_nodes(xpath = '//*[@class="company"]')  %>% 
+    rvest::html_text() %>%
+    stringi::stri_trim_both()
+tib3 <- tibble(company3, .name_repair = ~ c("company"))
+
+
+# adding additional Indeed searches because results were not very helpful
+
+url4 <- "https://www.indeed.com/jobs?q=Data+Scientist&l=New+York%2C+NY&sort=date&limit=50&radius=25&start=150"
+
+# read html
+page4 <- xml2::read_html(url4)
+
+#get the company name from the search
+company4 <- page4 %>% 
+    rvest::html_nodes("span")  %>% 
+    rvest::html_nodes(xpath = '//*[@class="company"]')  %>% 
+    rvest::html_text() %>%
+    stringi::stri_trim_both()
+tib4 <- tibble(company4, .name_repair = ~ c("company"))
+
+url5 <- "https://www.indeed.com/jobs?q=Data+Scientist&l=New+York%2C+NY&sort=date&limit=50&radius=25&start=200"
+
+# read html
+page5 <- xml2::read_html(url5)
+
+#get the company name from the search
+company5 <- page5 %>% 
+    rvest::html_nodes("span")  %>% 
+    rvest::html_nodes(xpath = '//*[@class="company"]')  %>% 
+    rvest::html_text() %>%
+    stringi::stri_trim_both()
+tib5 <- tibble(company5, .name_repair = ~ c("company"))
+
+
+fullcomp <- rbind(tib1, tib2, tib3, tib4, tib5)
+fullcomp
+```
+
+This gives us a good list of companies that have (sometimes multiple) Data Scientist openings in New York City. Now we can run this list against the dataset with high CAGR companies and see what matches.
+
+```{r}
+ds_cagr <- fullcomp %>%
+  filter(fullcomp$company %in% corp_df$Name)
+
+ds_cagr
+```
+A first attempt at this, using only three pages of scraped Indeed data, yielded only one company, Yext. I went back and added an additional 100 Indeed posts. This hardly improved things. There are only two high-growth companies, Yext and BairesDev, that are hiring for Data Scientists in the New York area. Could it be that New York just isn't the technology incubator that we wish it was. Is San Francisco still king? It's worth another look, using roughly the same methodology to see if there are any noticeable differences.
+
+```{r}
+#link to New York Data Scientist job query
+
+sfurl1 <- "https://www.indeed.com/jobs?as_and=Data+Scientist&as_phr=&as_any=&as_not=&as_ttl=&as_cmp=&jt=all&st=&salary=&radius=50&l=san+francisco%2C+ca&fromage=any&limit=50&sort=date&psf=advsrch&from=advancedsearch"
+
+# read html
+sfpage1 <- xml2::read_html(sfurl1)
+
+#get the company name from the search
+sfcompany1 <- sfpage1 %>% 
+    rvest::html_nodes("span")  %>% 
+    rvest::html_nodes(xpath = '//*[@class="company"]')  %>% 
+    rvest::html_text() %>%
+    stringi::stri_trim_both()
+sftib1 <- tibble(sfcompany1, .name_repair = ~ c("company"))
+
+sfurl2 <- "https://www.indeed.com/jobs?q=Data+Scientist&l=san+francisco%2C+ca&radius=50&sort=date&limit=50&start=50"
+
+# read html
+sfpage2 <- xml2::read_html(sfurl2)
+
+#get the company name from the search
+sfcompany2 <- sfpage2 %>% 
+    rvest::html_nodes("span")  %>% 
+    rvest::html_nodes(xpath = '//*[@class="company"]')  %>% 
+    rvest::html_text() %>%
+    stringi::stri_trim_both()
+sftib2 <- tibble(sfcompany2, .name_repair = ~ c("company"))
+
+sfurl3 <- "https://www.indeed.com/jobs?q=Data+Scientist&l=san+francisco%2C+ca&radius=50&sort=date&limit=50&start=100"
+
+# read html
+sfpage3 <- xml2::read_html(sfurl3)
+
+#get the company name from the search
+sfcompany3 <- sfpage3 %>% 
+    rvest::html_nodes("span")  %>% 
+    rvest::html_nodes(xpath = '//*[@class="company"]')  %>% 
+    rvest::html_text() %>%
+    stringi::stri_trim_both()
+sftib3 <- tibble(sfcompany3, .name_repair = ~ c("company"))
+
+
+# adding additional Indeed searches because results were not very helpful
+
+sfurl4 <- "https://www.indeed.com/jobs?q=Data+Scientist&l=san+francisco%2C+ca&radius=50&sort=date&limit=50&start=150"
+
+# read html
+sfpage4 <- xml2::read_html(sfurl4)
+
+#get the company name from the search
+sfcompany4 <- sfpage4 %>% 
+    rvest::html_nodes("span")  %>% 
+    rvest::html_nodes(xpath = '//*[@class="company"]')  %>% 
+    rvest::html_text() %>%
+    stringi::stri_trim_both()
+sftib4 <- tibble(sfcompany4, .name_repair = ~ c("company"))
+
+sfurl5 <- "https://www.indeed.com/jobs?q=Data+Scientist&l=san+francisco%2C+ca&radius=50&sort=date&limit=50&start=200"
+
+# read html
+sfpage5 <- xml2::read_html(sfurl5)
+
+#get the company name from the search
+sfcompany5 <- sfpage5 %>% 
+    rvest::html_nodes("span")  %>% 
+    rvest::html_nodes(xpath = '//*[@class="company"]')  %>% 
+    rvest::html_text() %>%
+    stringi::stri_trim_both()
+sftib5 <- tibble(sfcompany5, .name_repair = ~ c("company"))
+
+
+sffullcomp <- rbind(sftib1, sftib2, sftib3, sftib4, sftib5)
+sffullcomp
+
+```
+
+Now let's run this against the high-CAGR dataset to see just who the CAGR king is.
+
+```{r}
+sfds_cagr <- sffullcomp %>%
+  filter(sffullcomp$company %in% corp_df$Name)
+
+sfds_cagr
+
+
+```
+This yielded even FEWER results. So what's going on? Well, it could be that the really high-growth companies are startups, and most of these startups are small, meaning they likely don't post jobs on large platforms like Indeed. So Indeed might not be the best avenue for finding a job if you're a Data Scientist looking for a job at a high-growth company.
+
+```{r}
+mean(corp_df$employees_2018)
+median(corp_df$employees_2018)
+
+```
+The average employee headcount within these organizations is just under 500, and the median is 81, a good example of when to use the median for analysis. 
+
+Another possibility is that Data Scientists aren't really in demand within early-stage startups that don't actually have much, er, data. It may be that these tech firms are more concerned with hiring developers and financial engineers to actually develop core product functionality. But how young are these companies?
+```{r}
+mean(corp_df$founded)
+median(corp_df$founded)
+```
+The numbers above don't even indicate a particular skew toward younger companies among those with an elevated CAGR. but there does seem to be some relationship between a company's immaturity and its CAGR. This makes some sense, intuitively, as older, ostensibly larger companies, don't generate enormous growth as easily due to their size.
+
+```{r}
+
+b <- 1990
+high_cagr_min <-dplyr::filter(high_cagr, high_cagr$founded>b)
+
+cagr_found_lm <- lm(CAGR_pct_inc ~ founded, 
+                data = high_cagr_min)
+
+library(visreg)
+visreg(cagr_found_lm, "founded", gg = TRUE)
+
+```
+
+The good news for aspiring Data Scientists, though, is that there are many, many openings in general, including multiple openings within individual firms. 
+
+First, let's look at which firms are most actively seeking Data Scientists in New York.
+```{r}
+library(RColorBrewer)
+library(scales)
+nycomp_count <- fullcomp %>%
+  count(company) %>%
+  arrange(desc(n))
+
+a <- 1
+nycomp_count_min <-dplyr::filter(nycomp_count, nycomp_count[,2]>a)
+
+ggplot(nycomp_count_min) + geom_bar(aes(reorder(company,n) , y = n, fill=company) , stat = "identity", position = "dodge", width = .5) + coord_flip() +  theme(legend.position = "none") +  labs(title = "NY: Number of Data Scientist Openings, Min. 2", x = "", y = "", fill = "Source" + scale_x_continuous(breaks = c(2,3,4,5,6,7)))
+
+```
+
+Let's run the same analysis on SF.
+
+```{r}
+sfcomp_count <- sffullcomp %>%
+  count(company) %>%
+  arrange(desc(n))
+
+sfcomp_count_min <-dplyr::filter(sfcomp_count, sfcomp_count[,2]>a)
+
+ggplot(sfcomp_count_min) + geom_bar(aes(reorder(company,n) , y = n, fill=company) , stat = "identity", position = "dodge", width = .5) + coord_flip() +  theme(legend.position = "none") +  labs(title = "SF: Number of Data Scientist Openings, Min. 2", x = "", y = "", fill = "Source" + scale_x_continuous(breaks = c(2,3,4,5,6,7)))
+
+
+```
+
+There's actually a bit of overlap here. It could be interesting to see if some of these are the same roles with flexible work locations, post-COVID. In any case, it appears that there are more Data Scientist jobs posted to Indeed in New York than in SF in general. 
+
+## Conclusion
+
+Let's go back to the questions we intended to answer:
+
+- Are the highest-growth firms hiring up Data Scientists in the New York area? 
+- Are these jobs found on Indeed?
+
+While there are certainly lots of jobs for Data Scientists in the New York area, there don't appear to be many high-CAGR firms looking to hire Data Scientists, at least not on Indeed. It may be that Indeed isn't the best job search engine for aspiring Data Scientists to use in their searches. It could also be that some of the high growth, younger companies don't have their HR functions built out sufficiently to post their jobs anywhere but their own sites. In any case, there are still plenty of opportunities for Data Scientists in today's job market. 
+
+```
+
